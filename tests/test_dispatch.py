@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -23,11 +24,13 @@ def test_injected_agent(tmp_path):
 
     def fake(prompt, cwd, timeout_s):
         assert "rebuild" in prompt
-        assert cwd == ws
+        assert cwd != ws
+        (cwd / "compile.sh").write_text("built")
         return {"status": "ok", "detail": "done"}
 
     result = dispatch_trial(ws, agent_fn=fake)
     assert result["status"] == "ok"
+    assert (ws / "compile.sh").read_text() == "built"
 
 
 def test_api_key_never_written(tmp_path, monkeypatch):
@@ -39,6 +42,7 @@ def test_api_key_never_written(tmp_path, monkeypatch):
 
     def fake(prompt, cwd, timeout_s):
         assert "secret-sentinel-key" not in prompt
+        assert os.environ.get("CURSOR_API_KEY") is None
         return {"status": "ok", "detail": "done"}
 
     dispatch_trial(ws, agent_fn=fake)

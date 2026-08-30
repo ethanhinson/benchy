@@ -19,32 +19,40 @@ def _is_blocked(rel: Path) -> bool:
     return bool(parts & _BLOCKED_NAMES) or rel.name in _BLOCKED_NAMES
 
 
+def _copy_filtered(src: Path, dest: Path) -> None:
+    if src.is_symlink() or _is_blocked(Path(src.name)):
+        return
+    if src.is_dir():
+        dest.mkdir(parents=True, exist_ok=True)
+        for child in src.iterdir():
+            _copy_filtered(child, dest / child.name)
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dest)
+
+
 def _safe_copy_docs(gold_docs_root: Path, dest_docs: Path, doc_paths: list[str]) -> None:
     dest_docs.mkdir(parents=True, exist_ok=True)
     root = gold_docs_root.resolve()
     for raw in doc_paths:
-        src = (gold_docs_root / raw).resolve()
-        try:
-            src.relative_to(root)
-        except ValueError:
-            warnings.warn(f"skipping doc path outside gold root: {raw}", stacklevel=2)
-            continue
-        if not src.exists():
-            warnings.warn(f"missing doc path: {raw}", stacklevel=2)
-            continue
+        src = (gold_docs_root / raw)
         if src.is_symlink():
             warnings.warn(f"skipping symlink doc path: {raw}", stacklevel=2)
             continue
-        rel = src.relative_to(root)
+        resolved = src.resolve()
+        try:
+            resolved.relative_to(root)
+        except ValueError:
+            warnings.warn(f"skipping doc path outside gold root: {raw}", stacklevel=2)
+            continue
+        if not resolved.exists():
+            warnings.warn(f"missing doc path: {raw}", stacklevel=2)
+            continue
+        rel = resolved.relative_to(root)
         if _is_blocked(rel):
             warnings.warn(f"skipping blocked doc path: {raw}", stacklevel=2)
             continue
-        dest = dest_docs / rel
-        if src.is_dir():
-            shutil.copytree(src, dest, dirs_exist_ok=True, symlinks=False)
-        else:
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dest)
+        _copy_filtered(resolved, dest_docs / rel)
 
 
 def prepare_trial(

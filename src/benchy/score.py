@@ -83,14 +83,19 @@ def score_trial(
             status = "error:build"
         else:
             compile_sh.chmod(compile_sh.stat().st_mode | 0o111)
-            built = subprocess.run(
-                ["sh", str(compile_sh)],
-                cwd=workspace,
-                capture_output=True,
-                text=True,
-            )
-            if built.returncode != 0 or not candidate.is_file():
+            try:
+                built = subprocess.run(
+                    ["sh", str(compile_sh)],
+                    cwd=workspace,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+            except subprocess.TimeoutExpired:
                 status = "error:build"
+            else:
+                if built.returncode != 0 or not candidate.is_file():
+                    status = "error:build"
 
     records: list[dict] = []
     passed = 0
@@ -120,7 +125,7 @@ def score_trial(
         with tempfile.TemporaryDirectory() as gold_wd, tempfile.TemporaryDirectory() as cand_wd:
             try:
                 gold_out = run_probe(gold_binary, resolved, workdir=Path(gold_wd))
-            except OSError:
+            except (OSError, subprocess.TimeoutExpired):
                 result = {
                     "passed": 0,
                     "failed": 0,
@@ -131,7 +136,19 @@ def score_trial(
                 }
                 (trial_dir / "score.json").write_text(json.dumps(result, indent=2) + "\n")
                 return result
-            cand_out = run_probe(candidate, resolved, workdir=Path(cand_wd))
+            try:
+                cand_out = run_probe(candidate, resolved, workdir=Path(cand_wd))
+            except (OSError, subprocess.TimeoutExpired):
+                failed += 1
+                records.append(
+                    {
+                        "name": probe.name,
+                        "match": False,
+                        "gold_exit": gold_out[0],
+                        "cand_exit": None,
+                    }
+                )
+                continue
         match = compare_outputs(gold_out, cand_out, probe)
         if match:
             passed += 1

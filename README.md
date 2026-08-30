@@ -24,6 +24,6 @@ uv run pytest
 uv run benchy run --slice first
 ```
 
-`CURSOR_API_KEY` is required for `benchy dispatch`. `benchy run` skips dispatch when the key is absent, then still scores, packages, and reports.
+`CURSOR_API_KEY` is required for `benchy dispatch` (install the SDK with `uv sync --extra dispatch`). `benchy run` skips dispatch when the key is absent, then still scores, packages, and reports. Local agents cannot be fully filesystem-sandboxed by the Cursor SDK; dispatch copies each trial into a temporary jail and removes the API key from the process environment for the duration of the run.
 
 Official trees land in `runs/<run_id>-official/<arm>/<instance_id>/submission.tar.gz`.

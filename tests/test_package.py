@@ -15,8 +15,13 @@ def test_per_arm_official_layout_excludes_gold_and_candidate(tmp_path):
         (ws / "candidate").write_bytes(b"cand")
         (ws / "RULES.md").write_text("r")
         (ws / "PROMPT.md").write_text("p")
+        (ws / "change.md").write_text("process")
         (ws / "docs").mkdir()
+        (ws / "docs" / "README.md").write_text("docs")
         (ws / "skills").mkdir()
+        (ws / "skills" / "x.md").write_text("skill")
+        (ws / "target" / "release").mkdir(parents=True)
+        (ws / "target" / "release" / "hexyl").write_bytes(b"bin")
     dest = tmp_path / "official"
     package_run(tmp_path / "run", dest)
     assert not (dest / inst / "submission.tar.gz").exists()
@@ -31,3 +36,6 @@ def test_per_arm_official_layout_excludes_gold_and_candidate(tmp_path):
         assert "candidate" not in names
         assert "RULES.md" not in names
         assert "PROMPT.md" not in names
+        assert "change.md" not in names
+        assert not any(n.startswith("target/") for n in names)
+        assert not any(n.startswith("docs/") for n in names)

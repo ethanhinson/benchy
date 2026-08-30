@@ -8,6 +8,19 @@ ARMS = ("none", "superpowers", "docket-superpowers")
 
 def write_report(run_dir: Path) -> dict:
     tasks: dict[str, dict] = {}
+    for err_path in sorted(run_dir.glob("*/error.json")):
+        instance_id = err_path.parent.name
+        raw = json.loads(err_path.read_text())
+        status = str(raw.get("status", "error:gold"))
+        cell = {
+            "pass_rate": 0.0,
+            "status": status,
+            "resolved": False,
+            "almost": False,
+        }
+        tasks.setdefault(instance_id, {})
+        for arm in ARMS:
+            tasks[instance_id].setdefault(arm, cell)
     for score_path in sorted(run_dir.glob("*/*/score.json")):
         instance_id = score_path.parent.parent.name
         arm = score_path.parent.name

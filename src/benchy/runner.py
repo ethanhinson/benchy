@@ -50,13 +50,9 @@ def run_prepare(
     refresh_source: Path | None = None,
 ) -> Path:
     if refresh_packs:
-        source = refresh_source or Path(
-            os.environ.get(
-                "BENCHY_SUPERPOWERS_ROOT",
-                "",
-            )
-        )
-        if source:
+        raw = os.environ.get("BENCHY_SUPERPOWERS_ROOT", "")
+        source = refresh_source or (Path(raw) if raw else None)
+        if source is not None:
             refresh_superpowers(_packs_dir(root), source)
     tasks = filter_catalog(load_catalog(root / "tasks"), slice=slice, task=task)
     arms = ALL_ARMS if arm is None else (Arm(arm),)
@@ -87,7 +83,7 @@ def run_prepare(
     return run_dir
 
 
-def run_dispatch(root: Path, run_id: str, *, agent_fn=None) -> int:
+def run_dispatch(root: Path, run_id: str, *, agent_fn=None, parallel: int = 1) -> int:
     if agent_fn is None and not os.environ.get("CURSOR_API_KEY"):
         print("dispatch skipped: CURSOR_API_KEY is not set", file=sys.stderr)
         run_dir = _run_dir(root, run_id)
@@ -97,7 +93,10 @@ def run_dispatch(root: Path, run_id: str, *, agent_fn=None) -> int:
             trial.write_text(json.dumps(data, indent=2) + "\n")
         return 0
     run_dir = _run_dir(root, run_id)
-    for workspace in sorted(run_dir.glob("*/*/workspace")):
+    workspaces = sorted(run_dir.glob("*/*/workspace"))
+    workers = max(1, min(parallel, 3))
+
+    def one(workspace: Path) -> None:
         try:
             dispatch_trial(workspace, agent_fn=agent_fn)
         except DispatchError as exc:
@@ -107,6 +106,15 @@ def run_dispatch(root: Path, run_id: str, *, agent_fn=None) -> int:
                 data["status"] = exc.code
                 data_path.write_text(json.dumps(data, indent=2) + "\n")
             print(f"{workspace}: {exc.code}", file=sys.stderr)
+
+    if workers == 1:
+        for workspace in workspaces:
+            one(workspace)
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            list(pool.map(one, workspaces))
     return 0
 
 

@@ -76,6 +76,37 @@ def test_prepare_blocks_src_even_when_listed(tmp_path):
     assert (ws / "docs" / "README.md").is_file()
 
 
+def test_prepare_strips_nested_src_git_and_symlinks(tmp_path):
+    gold = tmp_path / "gold"
+    docs = gold / "doc"
+    docs.mkdir(parents=True)
+    (docs / "guide.md").write_text("ok")
+    (docs / "src").mkdir()
+    (docs / "src" / "main.rs").write_text("leaked")
+    (docs / ".git").mkdir()
+    (docs / ".git" / "HEAD").write_text("ref")
+    (docs / "link.rs").symlink_to(gold / "secret.rs")
+    (gold / "secret.rs").write_text("nope")
+    (gold / "README.md").write_text("ok")
+    binary = gold / "tool"
+    binary.write_bytes(b"x")
+    binary.chmod(0o755)
+    task = _hexyl()
+    object.__setattr__(task, "doc_paths", ["README.md", "doc"])
+    ws = prepare_trial(
+        task=task,
+        arm=Arm.NONE,
+        run_dir=tmp_path / "run",
+        packs_dir=ROOT / "packs",
+        gold_binary=binary,
+        gold_docs_root=gold,
+    )
+    assert (ws / "docs" / "doc" / "guide.md").is_file()
+    assert not (ws / "docs" / "doc" / "src").exists()
+    assert not (ws / "docs" / "doc" / ".git").exists()
+    assert not (ws / "docs" / "doc" / "link.rs").exists()
+
+
 def test_prepare_superpowers_has_skills(tmp_path):
     gold = tmp_path / "gold"
     gold.mkdir()

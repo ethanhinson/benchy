@@ -31,3 +31,12 @@ def test_report_table(tmp_path):
     md = (tmp_path / "report.md").read_text()
     assert "superpowers" in md
     assert inst in md
+
+
+def test_report_reads_task_error_json(tmp_path):
+    inst = "riquito__tuc.16fb471"
+    (tmp_path / inst).mkdir()
+    (tmp_path / inst / "error.json").write_text('{"status": "error:gold"}')
+    data = write_report(tmp_path)
+    assert data["tasks"][inst]["none"]["status"] == "error:gold"
+    assert data["tasks"][inst]["superpowers"]["status"] == "error:gold"

@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         if not __import__("os").environ.get("CURSOR_API_KEY"):
             print("dispatch aborted: CURSOR_API_KEY is not set", file=__import__("sys").stderr)
             return 1
-        return run_dispatch(root, run_id)
+        return run_dispatch(root, run_id, parallel=args.parallel)
     if args.cmd == "score":
         run_score(root, run_id)
         return 0
@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
             arm=args.arm,
             refresh_packs=args.refresh_packs,
         )
-        run_dispatch(root, run_id)
+        run_dispatch(root, run_id, parallel=args.parallel)
         run_score(root, run_id)
         run_package(root, run_id)
         run_report(root, run_id)
