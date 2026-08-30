@@ -155,15 +155,15 @@ If gold and candidate both fail a probe the same way, that probe still counts as
 
 ### Packager
 
-`benchy package` walks `runs/<run_id>/` and writes an official-shaped tree:
+`benchy package` writes one official-shaped tree **per arm**. Never collapse arms into a single tarball.
 
 ```
-<run_id>-official/
+<run_id>-official/<arm>/
   <instance_id>/
-    submission.tar.gz    # gzipped workspace, minus executable/docs/RULES if the official eval supplies those; include agent-written source and compile.sh
+    submission.tar.gz
 ```
 
-The tarball contents are the agent's source tree and build script, not the gold binary. `programbench eval <that-dir>` is the later Linux step.
+`programbench eval <run_id>-official/<arm>` scores that arm only. The tarball is the agent's source tree and `compile.sh` only — not `executable`, `docs/`, `RULES.md`, `PROMPT.md`, `skills/`, or `candidate`. A missing trial is a warning; the rest still package.
 
 ### Reporter
 
