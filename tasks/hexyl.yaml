@@ -1,0 +1,12 @@
+slug: hexyl
+instance_id: sharkdp__hexyl.2e26437
+repo: https://github.com/sharkdp/hexyl
+pin: 2e26437
+language: rs
+slice: first
+gold_build: cargo build --release
+gold_binary: target/release/hexyl
+doc_paths:
+  - README.md
+  - doc/
+  - hexyl.1

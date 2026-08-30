@@ -1,0 +1,10 @@
+slug: eva
+instance_id: oppiliappan__eva.41ae245
+repo: https://github.com/oppiliappan/eva
+pin: 41ae245
+language: rs
+slice: first
+gold_build: cargo build --release
+gold_binary: target/release/eva
+doc_paths:
+  - README.md

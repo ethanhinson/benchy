@@ -1,0 +1,10 @@
+slug: tuc
+instance_id: riquito__tuc.16fb471
+repo: https://github.com/riquito/tuc
+pin: 16fb471
+language: rs
+slice: first
+gold_build: cargo build --release
+gold_binary: target/release/tuc
+doc_paths:
+  - README.md
