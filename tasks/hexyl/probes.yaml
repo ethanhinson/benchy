@@ -1,0 +1,6 @@
+- name: help
+  argv: ["--help"]
+  normalize: help
+- name: version
+  argv: ["--version"]
+  normalize: help
