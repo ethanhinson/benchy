@@ -10,7 +10,7 @@ Follow this lifecycle in this workspace only:
 1. Write `change.md` — id, title, why, what, out of scope.
 2. Write `spec.md` — architecture and prompt contract for the rebuild.
 3. Write `plan.md` — ordered implementation steps.
-4. Implement source and `compile.sh` that produces `./candidate`.
+4. Implement source and `compile.sh` that produces `./executable`.
 5. Write `review.md` — what was checked against `./executable`.
 
 Superpowers skills in `./skills/` still apply.

@@ -50,7 +50,7 @@ SOURCE_SUFFIXES = frozenset(
 )
 
 
-def _should_package(rel: Path) -> bool:
+def should_package(rel: Path) -> bool:
     if any(part in EXCLUDE_NAMES for part in rel.parts):
         return False
     if rel.name in EXCLUDE_NAMES:
@@ -76,7 +76,7 @@ def package_run(run_dir: Path, dest_root: Path) -> Path:
                 if path.is_symlink() or not path.is_file():
                     continue
                 rel = path.relative_to(workspace)
-                if not _should_package(rel):
+                if not should_package(rel):
                     continue
                 tf.add(path, arcname=str(rel))
     if not found:

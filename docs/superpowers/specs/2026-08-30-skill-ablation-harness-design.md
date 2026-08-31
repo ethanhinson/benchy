@@ -133,7 +133,7 @@ Sibling metadata (not visible to the agent, or present but unused — see Dispat
 Each trial is one Cursor SDK local agent (`Agent.prompt`) with `cwd` set to that trial's `workspace/`.
 
 - The prompt is `PROMPT.md` plus: follow only `./skills/**` if that directory exists; if it does not exist, do not follow any process skill.
-- The agent must write source and a `compile.sh` that produces a candidate binary at a documented path (`./candidate` or `./compile.sh`'s stdout path). Default contract: `compile.sh` builds `./candidate`.
+- The agent must write source and a `compile.sh` that produces `./executable`. That matches official ProgramBench eval (`chmod +x ./compile.sh && ./compile.sh`, then `mv ./executable`).
 - Wall clock: 3 hours per trial. On timeout the trial is `error:timeout` and the slice continues.
 - Host global Cursor skills are a known confound. The prompt and the workspace-only pack are the isolation mechanism. `--cloud` is a later option if local inheritance is measured to leak; it is not required for slice B.
 
@@ -141,11 +141,12 @@ Each trial is one Cursor SDK local agent (`Agent.prompt`) with `cwd` set to that
 
 ### Local scorer
 
-After dispatch (or after a human-placed `./candidate`):
+After dispatch:
 
-1. Run `compile.sh` if `./candidate` is missing.
-2. Load the task's **probe suite** — a checked-in list of `{argv, stdin, fixture}` cases under `tasks/<slug>/probes.yaml`.
-3. Run each probe against the Mac gold and the candidate.
+1. Copy packager-allowlisted source + `compile.sh` into a clean directory (never score a leftover workspace binary or the gold `./executable`).
+2. `rm -f ./executable`, seed a synthetic git repo, run `./compile.sh` (honor the shebang; 900s timeout). Require a newly produced `./executable`.
+3. Load the task's **probe suite** - a checked-in list of `{argv, stdin, fixture}` cases under `tasks/<slug>/probes.yaml`.
+4. Run each probe against the gold cache binary and the freshly compiled `./executable`.
 4. A probe passes when exit code, stdout, and stderr match (whitespace-normalized on stderr help text only when the probe marks `normalize: help`).
 5. Write `score.json`: `{passed, failed, total, pass_rate, probes: [...]}`.
 
@@ -188,7 +189,7 @@ One failed trial does not abort the slice. The report shows `error` for that cel
 | `CURSOR_API_KEY` missing at dispatch | Abort dispatch phase; prepared workspaces stay |
 | Agent timeout or SDK error | That trial `error:timeout` / `error:dispatch`; continue |
 | `compile.sh` missing or non-zero | That trial `error:build`; score 0 |
-| Candidate missing after compile | That trial `error:build`; score 0 |
+| `./executable` missing after compile | That trial `error:build`; score 0 |
 | Probe gold cannot execute | Task `error:gold`; skip remaining score for that task |
 | Package missing a trial | Warn; package the rest |
 
@@ -226,8 +227,8 @@ Implementation language: Python 3.12+ with `uv`. ProgramBench's own tooling is P
 `PROMPT.md` states:
 
 1. Rebuild the program from `./executable` and `docs/` only.
-2. Produce `compile.sh` that writes `./candidate`.
-3. Do not wrap, copy, or exec `./executable` in the candidate.
+2. Produce `compile.sh` that writes `./executable`.
+3. Do not wrap, copy, or exec the given gold binary in that rebuild.
 4. Do not decompile or disassemble `./executable`.
 5. If `skills/` exists, follow those skills. If it does not, do not apply any other process skill.
 
@@ -235,7 +236,7 @@ Implementation language: Python 3.12+ with `uv`. ProgramBench's own tooling is P
 
 Slice B is done when:
 
-1. `benchy run --slice first` can prepare 9 workspaces, dispatch 9 agents (or record a skipped dispatch if the key is absent), score whatever candidates exist, package official tarballs, and write a three-arm report.
+1. `benchy run --slice first` can prepare 9 workspaces, dispatch 9 agents (or record a skipped dispatch if the key is absent), score by clean-compiling `./executable`, package official tarballs, and write a three-arm report.
 2. Packer leak tests pass.
 3. A Linux host can run `programbench eval` on the packaged tree without renaming files.
 

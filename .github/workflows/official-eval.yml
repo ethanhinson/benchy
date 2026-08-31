@@ -1,0 +1,61 @@
+name: official-eval
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "artifacts/slice-b-1-official/**"
+      - ".github/workflows/official-eval.yml"
+      - "scripts/official_eval.sh"
+  push:
+    branches: [main, feat/harness]
+    paths:
+      - "artifacts/slice-b-1-official/**"
+      - ".github/workflows/official-eval.yml"
+      - "scripts/official_eval.sh"
+
+concurrency:
+  group: official-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [none, superpowers, docket-superpowers]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Confirm official layout
+        run: |
+          set -eu
+          for inst in sharkdp__hexyl.2e26437 riquito__tuc.16fb471 oppiliappan__eva.41ae245; do
+            test -f "artifacts/slice-b-1-official/${{ matrix.arm }}/$inst/submission.tar.gz"
+          done
+
+      - name: Fetch hidden-test blobs
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -eu
+          for inst in sharkdp__hexyl.2e26437 riquito__tuc.16fb471 oppiliappan__eva.41ae245; do
+            uvx programbench blob sync "$inst"
+          done
+
+      - name: Official programbench eval
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: bash scripts/official_eval.sh "${{ matrix.arm }}" official-results
+
+      - name: Upload eval json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-eval-${{ matrix.arm }}
+          path: official-results/
+          if-no-files-found: warn

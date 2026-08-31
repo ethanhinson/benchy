@@ -64,6 +64,9 @@ def score_arm(root: Path, official: Path, arm: str, run_dir: Path, gold_cache: P
             f"{spec.instance_id}/{arm}: {result['status']} "
             f"{result['passed']}/{result['total']} ({result['pass_rate']:.0%})"
         )
+        log = result.get("compile_log") or ""
+        if result["status"] == "error:build" and log:
+            print(log[-2000:])
 
 
 def try_official_eval(official: Path, dest: Path) -> None:

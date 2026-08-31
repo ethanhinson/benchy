@@ -31,6 +31,7 @@ def test_report_table(tmp_path):
     md = (tmp_path / "report.md").read_text()
     assert "superpowers" in md
     assert inst in md
+    assert "Local proxy probes only" in md
 
 
 def test_report_reads_task_error_json(tmp_path):

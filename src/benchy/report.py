@@ -51,6 +51,8 @@ def write_report(run_dir: Path) -> dict:
     (run_dir / "report.json").write_text(json.dumps(data, indent=2) + "\n")
 
     lines = [
+        "Local proxy probes only. Official ProgramBench scores require `programbench eval` on linux/amd64.",
+        "",
         "| instance | none | superpowers | docket-superpowers |",
         "|---|---|---|---|",
     ]

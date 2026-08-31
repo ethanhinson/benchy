@@ -39,3 +39,24 @@ def test_per_arm_official_layout_excludes_gold_and_candidate(tmp_path):
         assert "change.md" not in names
         assert not any(n.startswith("target/") for n in names)
         assert not any(n.startswith("docs/") for n in names)
+
+
+def test_tracked_official_trees_match_eval_layout():
+    root = Path(__file__).resolve().parents[1] / "artifacts" / "slice-b-1-official"
+    instances = (
+        "sharkdp__hexyl.2e26437",
+        "riquito__tuc.16fb471",
+        "oppiliappan__eva.41ae245",
+    )
+    for arm in ("none", "superpowers", "docket-superpowers"):
+        for inst in instances:
+            tgz = root / arm / inst / "submission.tar.gz"
+            assert tgz.is_file(), tgz
+            with tarfile.open(tgz, "r:gz") as tf:
+                names = set(tf.getnames())
+                compile_sh = tf.extractfile("compile.sh")
+                assert compile_sh is not None
+                body = compile_sh.read().decode()
+            assert "compile.sh" in names, tgz
+            assert "executable" not in names, tgz
+            assert "./executable" in body, tgz
