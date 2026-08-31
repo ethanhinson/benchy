@@ -1,0 +1,12 @@
+[package]
+name = "tuc"
+version = "1.3.0"
+edition = "2021"
+authors = ["Riccardo Attilio Galli"]
+
+[[bin]]
+name = "tuc"
+path = "src/main.rs"
+
+[dependencies]
+regex = "1"
