@@ -34,6 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--run-id")
         sp.add_argument("--refresh-packs", action="store_true")
         sp.add_argument("--parallel", type=int, default=1)
+        if name in {"prepare", "dispatch", "run"}:
+            sp.add_argument(
+                "--cloud",
+                action="store_true",
+                help="Dispatch Cursor cloud agents against trial/* branches on this repo",
+            )
     return p
 
 
@@ -68,13 +74,16 @@ def main(argv: list[str] | None = None) -> int:
             task=args.task,
             arm=args.arm,
             refresh_packs=args.refresh_packs,
+            linux_gold=getattr(args, "cloud", False),
         )
         return 0
     if args.cmd == "dispatch":
         if not __import__("os").environ.get("CURSOR_API_KEY"):
             print("dispatch aborted: CURSOR_API_KEY is not set", file=__import__("sys").stderr)
             return 1
-        return run_dispatch(root, run_id, parallel=args.parallel)
+        return run_dispatch(
+            root, run_id, parallel=args.parallel, cloud=getattr(args, "cloud", False)
+        )
     if args.cmd == "score":
         run_score(root, run_id)
         return 0
@@ -92,8 +101,11 @@ def main(argv: list[str] | None = None) -> int:
             task=args.task,
             arm=args.arm,
             refresh_packs=args.refresh_packs,
+            linux_gold=getattr(args, "cloud", False),
         )
-        run_dispatch(root, run_id, parallel=args.parallel)
+        run_dispatch(
+            root, run_id, parallel=args.parallel, cloud=getattr(args, "cloud", False)
+        )
         run_score(root, run_id)
         run_package(root, run_id)
         run_report(root, run_id)

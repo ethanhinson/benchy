@@ -81,3 +81,30 @@ def test_tracked_official_trees_match_eval_layout():
             assert "--offline" in body, tgz
             assert ".cargo/config.toml" in names, tgz
             assert any(n.startswith("vendor/") for n in names), tgz
+
+
+def test_slice_c1_official_trees_match_eval_layout():
+    root = Path(__file__).resolve().parents[1] / "artifacts" / "slice-c-1-official"
+    instances = (
+        "sharkdp__hexyl.2e26437",
+        "riquito__tuc.16fb471",
+        "oppiliappan__eva.41ae245",
+    )
+    for arm in ("none", "superpowers", "docket-superpowers"):
+        for inst in instances:
+            tgz = root / arm / inst / "submission.tar.gz"
+            assert tgz.is_file(), tgz
+            with tarfile.open(tgz, "r:gz") as tf:
+                names = set(tf.getnames())
+                compile_sh = tf.extractfile("compile.sh")
+                assert compile_sh is not None
+                body = compile_sh.read().decode()
+            assert "compile.sh" in names, tgz
+            assert "executable" not in names, tgz
+            assert "./executable" in body, tgz
+            assert "--offline" in body, tgz
+            # eva docket-superpowers has no crates.io deps
+            if inst == "oppiliappan__eva.41ae245" and arm == "docket-superpowers":
+                continue
+            assert ".cargo/config.toml" in names, tgz
+            assert any(n.startswith("vendor/") for n in names), tgz

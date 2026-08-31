@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
 from benchy.catalog import filter_catalog, load_catalog
+from benchy.cloud_dispatch import dispatch_cloud_workspace
 from benchy.dispatch import DispatchError, dispatch_trial
 from benchy.gold import GoldError, ensure_gold
+from benchy.gold_linux import ensure_gold_linux
 from benchy.models import Arm
 from benchy.package import package_run
 from benchy.packs import refresh_superpowers
@@ -48,6 +51,7 @@ def run_prepare(
     arm: str | None = None,
     refresh_packs: bool = False,
     refresh_source: Path | None = None,
+    linux_gold: bool = False,
 ) -> Path:
     if refresh_packs:
         raw = os.environ.get("BENCHY_SUPERPOWERS_ROOT", "")
@@ -64,7 +68,11 @@ def run_prepare(
         if spec.instance_id in failed_gold:
             continue
         try:
-            binary = ensure_gold(spec, gold_cache)
+            binary = (
+                ensure_gold_linux(spec, gold_cache)
+                if linux_gold
+                else ensure_gold(spec, gold_cache)
+            )
         except GoldError:
             failed_gold.add(spec.instance_id)
             err = run_dir / spec.instance_id / "error.json"
@@ -83,7 +91,22 @@ def run_prepare(
     return run_dir
 
 
-def run_dispatch(root: Path, run_id: str, *, agent_fn=None, parallel: int = 1) -> int:
+def _origin_url(root: Path) -> str:
+    git = subprocess.run(
+        ["git", "-C", str(root), "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    url = (git.stdout or "").strip()
+    if url.startswith("git@github.com:"):
+        return "https://github.com/" + url.removeprefix("git@github.com:").removesuffix(".git")
+    return url.removesuffix(".git") if url else "https://github.com/ethanhinson/benchy"
+
+
+def run_dispatch(
+    root: Path, run_id: str, *, agent_fn=None, parallel: int = 1, cloud: bool = False
+) -> int:
     if agent_fn is None and not os.environ.get("CURSOR_API_KEY"):
         print("dispatch skipped: CURSOR_API_KEY is not set", file=sys.stderr)
         run_dir = _run_dir(root, run_id)
@@ -99,7 +122,26 @@ def run_dispatch(root: Path, run_id: str, *, agent_fn=None, parallel: int = 1) -
 
     def one(workspace: Path) -> None:
         try:
-            dispatch_trial(workspace, agent_fn=agent_fn, api_key=held_key)
+            if cloud:
+                origin = _origin_url(root)
+                push_url = (
+                    subprocess.run(
+                        ["git", "-C", str(root), "remote", "get-url", "origin"],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    ).stdout.strip()
+                )
+                dispatch_cloud_workspace(
+                    workspace,
+                    run_id=run_id,
+                    remote=push_url,
+                    api_key=held_key or "",
+                    repo_url=origin,
+                    wait=False,
+                )
+            else:
+                dispatch_trial(workspace, agent_fn=agent_fn, api_key=held_key)
         except DispatchError as exc:
             data_path = workspace.parent / "trial.json"
             if data_path.exists():
