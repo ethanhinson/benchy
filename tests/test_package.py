@@ -41,6 +41,24 @@ def test_per_arm_official_layout_excludes_gold_and_candidate(tmp_path):
         assert not any(n.startswith("docs/") for n in names)
 
 
+def test_package_includes_vendored_crates(tmp_path):
+    inst = "sharkdp__hexyl.2e26437"
+    ws = tmp_path / "run" / inst / "none" / "workspace"
+    (ws / "vendor" / "clap-4.6.6").mkdir(parents=True)
+    (ws / "src").mkdir(parents=True)
+    (ws / "compile.sh").write_text("#!/bin/sh\n")
+    (ws / "src" / "main.rs").write_text("fn main() {}\n")
+    (ws / "vendor" / "clap-4.6.6" / "LICENSE").write_text("MIT\n")
+    (ws / ".cargo").mkdir()
+    (ws / ".cargo" / "config.toml").write_text("[source.crates-io]\n")
+    dest = tmp_path / "official"
+    package_run(tmp_path / "run", dest)
+    with tarfile.open(dest / "none" / inst / "submission.tar.gz", "r:gz") as tf:
+        names = set(tf.getnames())
+    assert "vendor/clap-4.6.6/LICENSE" in names
+    assert ".cargo/config.toml" in names
+
+
 def test_tracked_official_trees_match_eval_layout():
     root = Path(__file__).resolve().parents[1] / "artifacts" / "slice-b-1-official"
     instances = (
@@ -60,3 +78,6 @@ def test_tracked_official_trees_match_eval_layout():
             assert "compile.sh" in names, tgz
             assert "executable" not in names, tgz
             assert "./executable" in body, tgz
+            assert "--offline" in body, tgz
+            assert ".cargo/config.toml" in names, tgz
+            assert any(n.startswith("vendor/") for n in names), tgz

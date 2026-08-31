@@ -55,6 +55,8 @@ def should_package(rel: Path) -> bool:
         return False
     if rel.name in EXCLUDE_NAMES:
         return False
+    if rel.parts and rel.parts[0] == "vendor":
+        return True
     return rel.name.lower() in SOURCE_NAMES or rel.suffix.lower() in SOURCE_SUFFIXES
 
 
