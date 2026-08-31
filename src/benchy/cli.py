@@ -1,10 +1,25 @@
 from __future__ import annotations
 
 import argparse
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 from benchy.runner import run_dispatch, run_package, run_prepare, run_report, run_score
+
+
+def load_root_env(root: Path) -> None:
+    path = root / ".env"
+    if not path.is_file():
+        return
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip("'").strip('"')
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         print("error: --parallel max is 3", file=__import__("sys").stderr)
         return 2
     root = _root(args)
+    load_root_env(root)
     run_id = _run_id(args)
     if args.cmd == "prepare":
         run_prepare(

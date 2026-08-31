@@ -1,9 +1,17 @@
+import os
 import shutil
 from pathlib import Path
 
-from benchy.cli import main
+from benchy.cli import load_root_env, main
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_load_root_env_sets_missing_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("CURSOR_API_KEY", raising=False)
+    (tmp_path / ".env").write_text("CURSOR_API_KEY=from-file\n")
+    load_root_env(tmp_path)
+    assert os.environ["CURSOR_API_KEY"] == "from-file"
 
 
 def test_help_exits_zero():

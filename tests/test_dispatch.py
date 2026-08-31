@@ -33,6 +33,23 @@ def test_injected_agent(tmp_path):
     assert (ws / "compile.sh").read_text() == "built"
 
 
+def test_jail_copies_execute_only_binary(tmp_path):
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "PROMPT.md").write_text("rebuild")
+    (ws.parent / "trial.json").write_text('{"status":"prepared"}')
+    exe = ws / "executable"
+    exe.write_bytes(b"goldbin")
+    exe.chmod(0o111)
+
+    def fake(prompt, cwd, timeout_s):
+        assert (cwd / "executable").is_file()
+        return {"status": "ok", "detail": "done"}
+
+    assert dispatch_trial(ws, agent_fn=fake)["status"] == "ok"
+    assert (os.stat(ws / "executable").st_mode & 0o777) == 0o111
+
+
 def test_api_key_never_written(tmp_path, monkeypatch):
     monkeypatch.setenv("CURSOR_API_KEY", "secret-sentinel-key")
     ws = tmp_path / "run" / "inst" / "none" / "workspace"

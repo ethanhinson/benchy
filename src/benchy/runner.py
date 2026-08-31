@@ -95,10 +95,11 @@ def run_dispatch(root: Path, run_id: str, *, agent_fn=None, parallel: int = 1) -
     run_dir = _run_dir(root, run_id)
     workspaces = sorted(run_dir.glob("*/*/workspace"))
     workers = max(1, min(parallel, 3))
+    held_key = os.environ.pop("CURSOR_API_KEY", None) if agent_fn is None else None
 
     def one(workspace: Path) -> None:
         try:
-            dispatch_trial(workspace, agent_fn=agent_fn)
+            dispatch_trial(workspace, agent_fn=agent_fn, api_key=held_key)
         except DispatchError as exc:
             data_path = workspace.parent / "trial.json"
             if data_path.exists():
@@ -107,14 +108,18 @@ def run_dispatch(root: Path, run_id: str, *, agent_fn=None, parallel: int = 1) -
                 data_path.write_text(json.dumps(data, indent=2) + "\n")
             print(f"{workspace}: {exc.code}", file=sys.stderr)
 
-    if workers == 1:
-        for workspace in workspaces:
-            one(workspace)
-    else:
-        from concurrent.futures import ThreadPoolExecutor
+    try:
+        if workers == 1:
+            for workspace in workspaces:
+                one(workspace)
+        else:
+            from concurrent.futures import ThreadPoolExecutor
 
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            list(pool.map(one, workspaces))
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                list(pool.map(one, workspaces))
+    finally:
+        if held_key is not None:
+            os.environ["CURSOR_API_KEY"] = held_key
     return 0
 
 

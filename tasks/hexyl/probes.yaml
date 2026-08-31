@@ -4,3 +4,12 @@
 - name: version
   argv: ["--version"]
   normalize: help
+- name: dump-sample
+  argv: ["--color", "never", "-n", "32", "sample.bin"]
+  fixture: fixtures/sample.bin
+- name: dump-stdin
+  argv: ["--color", "never", "-n", "16"]
+  stdin: "abcdefghijklmnop"
+- name: skip-bytes
+  argv: ["--color", "never", "-s", "6", "-n", "8", "sample.bin"]
+  fixture: fixtures/sample.bin
