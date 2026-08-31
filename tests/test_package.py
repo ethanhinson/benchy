@@ -41,6 +41,25 @@ def test_per_arm_official_layout_excludes_gold_and_candidate(tmp_path):
         assert not any(n.startswith("docs/") for n in names)
 
 
+def test_package_keeps_vendor_files_that_share_docket_names(tmp_path):
+    inst = "sharkdp__hexyl.2e26437"
+    ws = tmp_path / "run" / inst / "none" / "workspace"
+    (ws / "vendor" / "bitflags").mkdir(parents=True)
+    (ws / "src").mkdir(parents=True)
+    (ws / "compile.sh").write_text("#!/bin/sh\n")
+    (ws / "src" / "main.rs").write_text("fn main() {}\n")
+    (ws / "src" / "help.txt").write_text("usage\n")
+    (ws / "spec.md").write_text("docket spec\n")
+    (ws / "vendor" / "bitflags" / "spec.md").write_text("vendor spec\n")
+    dest = tmp_path / "official"
+    package_run(tmp_path / "run", dest)
+    with tarfile.open(dest / "none" / inst / "submission.tar.gz", "r:gz") as tf:
+        names = set(tf.getnames())
+    assert "vendor/bitflags/spec.md" in names
+    assert "src/help.txt" in names
+    assert "spec.md" not in names
+
+
 def test_package_includes_vendored_crates(tmp_path):
     inst = "sharkdp__hexyl.2e26437"
     ws = tmp_path / "run" / inst / "none" / "workspace"
@@ -108,3 +127,7 @@ def test_slice_c1_official_trees_match_eval_layout():
                 continue
             assert ".cargo/config.toml" in names, tgz
             assert any(n.startswith("vendor/") for n in names), tgz
+            if inst == "sharkdp__hexyl.2e26437" and arm != "superpowers":
+                assert "vendor/bitflags/spec.md" in names, tgz
+            if inst == "riquito__tuc.16fb471" and arm == "docket-superpowers":
+                assert "src/help.txt" in names, tgz
