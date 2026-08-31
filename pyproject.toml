@@ -1,0 +1,24 @@
+[project]
+name = "benchy"
+version = "0.1.0"
+description = "Skill-ablation harness for ProgramBench"
+requires-python = ">=3.12"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+dispatch = ["cursor-sdk"]
+
+[project.scripts]
+benchy = "benchy.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/benchy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

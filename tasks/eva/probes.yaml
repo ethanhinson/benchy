@@ -1,0 +1,14 @@
+- name: help
+  argv: ["--help"]
+  normalize: help
+- name: version
+  argv: ["--version"]
+  normalize: help
+- name: add
+  argv: ["2+2"]
+- name: multiply
+  argv: ["3*7"]
+- name: fix-2
+  argv: ["-f", "2", "1/2"]
+- name: hex-out
+  argv: ["-b", "16", "255"]
