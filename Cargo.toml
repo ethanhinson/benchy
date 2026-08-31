@@ -1,0 +1,15 @@
+[package]
+name = "hexyl"
+version = "0.16.0"
+edition = "2021"
+description = "A command-line hex viewer"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "hexyl"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "=4.5.23", features = ["derive", "env", "wrap_help"] }
+clap_complete = "=4.5.40"
+terminal_size = "0.4"
